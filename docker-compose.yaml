@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: cti-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  tor:
+    image: dperson/torproxy:latest
+    container_name: cti-tor
+    restart: always
+    ports:
+      - "9050:9050"
+      - "9051:9051"
+    volumes:
+      - tor_data:/var/lib/tor
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cti-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - TOR_SOCKS_PORT=9050
+    depends_on:
+      - mongodb
+      - tor
+    volumes:
+      - ./backend/models:/app/models
+      - ./backend/uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cti-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:
+  tor_data:
